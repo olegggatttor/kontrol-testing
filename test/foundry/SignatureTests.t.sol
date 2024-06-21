@@ -7,7 +7,9 @@ import "./utils/MakerWallet.sol";
 import "../../src/JamSettlement.sol";
 import "./utils/Utils.sol";
 
-contract SignatureTests is Test, Utils {
+import {KontrolCheats} from "kontrol-cheatcodes/KontrolCheats.sol";
+
+contract SignatureTests is Test, Utils, KontrolCheats {
 
     address internal maker;
     JamSettlement internal jam;
@@ -19,11 +21,18 @@ contract SignatureTests is Test, Utils {
         jam = new JamSettlement(PERMIT2, DAI_ADDRESS);
     }
 
+    function _notBuiltinAddress(address addr) internal view {
+        vm.assume(addr != address(this));
+        vm.assume(addr != address(vm));
+        vm.assume(addr != address(jam));
+        vm.assume(addr != address(maker));
+        vm.assume(addr > address(9));
+    }
 
-    function testValidEIP712Signature() public {
+    function testValidEIP712Signature(bytes calldata toHash) public {
         (address signer, uint256 signingKey) = makeAddrAndKey("someSigner");
 
-        bytes32 message = keccak256("Order Hash");
+        bytes32 message = keccak256(toHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(signingKey, message);
         bytes memory rsv_sig = abi.encodePacked(r, s, v);
         Signature.TypedSignature memory sig = Signature.TypedSignature(Signature.Type.EIP712, rsv_sig);
